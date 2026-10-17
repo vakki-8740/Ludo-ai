@@ -1,0 +1,114 @@
+E-LUDO — POWERFUL 1v1 WINNING STRATEGY
+
+1. Main Goal
+
+Har turn par aisi chaal choose karo jo game jeetne ka chance badhaye. Sirf goti aage badhana goal nahi hai. Apni gotiyon ko safe rakhna, opponent ko kaatna aur apni gotiyon ko jaldi finish karna equally important hai.
+
+2. Move Choose Karne Ki Priority
+
+Har dice roll ke baad possible chaalon ko is priority mein check karo:
+
+1. Winning Move: Agar koi goti finish ho sakti hai aur game jeet sakte hain, toh turant jeetne wali chaal chuno.
+2. Save Token: Agar opponent agle possible turn mein goti kaat sakta hai, toh goti ko safe karne ka option dekho.
+3. Capture Opponent: Agar opponent ki goti kaat sakte ho, toh capture ka fayda aur apni goti ka risk compare karo.
+4. Finish Token: Agar koi goti home pahunch sakti hai, toh us chaal ko high priority do.
+5. Reach Safe Square: Agar goti danger mein hai, toh safe square tak pahunchne ko preference do.
+6. Create Winning Position: Aisi chaal chuno jo future mein finish ya capture karne ke zyada options de.
+7. Develop New Tokens: Agar koi useful move nahi hai, toh naye token ko board par laane ya doosri goti aage badhane par vichaar karo.
+8. Best Progress: Agar upar ke options available nahi hain, toh woh goti chalao jo useful progress kare aur unnecessary risk na le.
+
+3. Dice Number 6 Aane Par
+
+Dice par 6 aane par hamesha ek hi action mat chuno.
+
+- Agar 6 se game jeet sakte ho, winning move lo.
+- Agar kisi goti ko bacha sakte ho, safety check karo.
+- Agar opponent ko kaat sakte ho, capture ka benefit check karo.
+- Agar koi goti board par nahi hai, toh nayi goti nikalne ka option evaluate karo.
+- Agar multiple useful moves hain, toh sabhi ko compare karke best move chuno.
+- Extra turn milne par next move ko bhi dhyaan mein rakhkar decision lo, lekin agla dice number pehle se pata hone ka assumption mat karo.
+
+4. Opponent Ko Capture Karne Ki Strategy
+
+- Opponent ki har goti ki current position track karo.
+- Check karo ki opponent ke available dice numbers se tumhari goti cut sakti hai ya nahi.
+- Capture karne se opponent ko kitna setback milega, uska estimate lagao.
+- Capture ke baad apni goti kis position par hogi, ye check karo.
+- Agar capture ke baad apni important goti bahut zyada danger mein aa jaati hai, toh safe alternative compare karo.
+- Sirf capture karne ke liye capture mat karo; capture tab karo jab overall position improve hoti ho.
+
+5. Apni Gotiyon Ko Safe Rakhne Ki Strategy
+
+- Har apni goti ke liye capture hone ka risk check karo.
+- Safe squares aur protected positions ko priority do jab unse useful progress bhi milti ho.
+- Agar ek goti finish ke kareeb hai, toh use unnecessary danger mein mat daalo.
+- Sirf ek goti par depend mat raho; multiple gotiyon ko useful positions mein develop karo.
+- Agar koi goti opponent ke capture range mein hai, toh possible safe moves ko compare karo.
+- Risk calculate karte waqt opponent ki sabhi gotiyon aur game ke actual rules ko consider karo.
+
+6. Token Development Strategy
+
+- Nayi goti nikalna aur existing goti ko aage badhana, dono options compare karo.
+- Har situation mein nayi goti nikalna ya purani goti chalana automatically best nahi hota.
+- Board par multiple active gotiyan rakhne se zyada movement options mil sakte hain.
+- Aisi gotiyon ko priority do jo finish, capture, safety ya future progress mein help kar sakti hain.
+- Jo goti finish ke kareeb hai, uski value aur risk ko separately evaluate karo.
+
+7. Future Moves Ka Analysis
+
+Har possible move ke liye ye questions check karo:
+
+1. Kya is move se game jeet sakte hain?
+2. Kya opponent ki goti capture hogi?
+3. Kya apni goti safe rahegi?
+4. Kya goti finish ke kareeb aayegi?
+5. Opponent ke agle possible dice rolls par kya ho sakta hai?
+6. Kya move ke baad hamare paas achhe future moves rahenge?
+7. Kya koi doosri legal chaal isse behtar hai?
+
+Future dice number ko guaranteed mat maano. Har possible number ko uski probability ke according evaluate karo.
+
+8. Move Scoring System
+
+Har legal move ko ek score do. Score jitna zyada hoga, move utna zyada useful maana jayega.
+
+Score calculate karte waqt in factors ko consider karo:
+
+- Game jeetne ka direct chance.
+- Apni goti finish karne ka benefit.
+- Opponent ki goti capture karne ka benefit.
+- Apni goti capture hone ka risk.
+- Safe position tak pahunchne ka benefit.
+- Future mein milne wale useful moves.
+- Multiple gotiyon ki progress aur overall board position.
+
+Winning move ko sabse zyada priority do. Lekin ek fixed priority list ko blindly follow mat karo; actual game state aur rules ke according decisions adjust karo.
+
+9. Long-Term Strategy
+
+- Har turn ka decision poore board ko dekhkar lo.
+- Opponent ki current position aur possible next moves ko track karo.
+- Sirf immediate reward nahi, future position ka bhi value calculate karo.
+- Agar do moves similar hain, toh woh move chuno jo kam risk aur zyada future options deta hai.
+- Agar ek move ka benefit bahut zyada hai, toh reasonable risk lena acceptable ho sakta hai.
+- Har decision actual legal moves aur current dice result par based hona chahiye.
+
+10. Strategy Testing
+
+Strategy ko bahut saare matches mein test karo.
+
+Har match mein record karo:
+
+- Match jeeta ya haara.
+- Kis move par capture hua.
+- Kitni gotiyan finish hui.
+- Kaun-se decisions useful rahe.
+- Kaun-se decisions se unnecessary risk hua.
+
+Alag-alag dice sequences aur opponents ke against performance compare karo. Win rate ko actual test results se calculate karo. Testing ke bina 80%, 90% ya 100% winning guarantee claim mat karo.
+
+FINAL RULE
+
+E-LUDO ka goal har turn par sabse smart legal move choose karna hai. AI ko sirf fixed rules follow nahi karne chahiye; use current board, dice result, opponent ki positions, capture risk, safety aur future possibilities ko compare karke decision lena chahiye.
+
+Game ke actual rules ko verify karo aur unhi ke according strategy apply karo. Koi bhi strategy dice ke random outcomes ko control nahi kar sakti aur guaranteed victory nahi de sakti.

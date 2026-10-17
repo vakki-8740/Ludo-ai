@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ludo Board</title>
+<style>
+  :root {
+    color-scheme: light;
+    box-sizing: border-box;
+    --bg: #eef0f2;
+    --fg: #23262b;
+    --muted: #666c75;
+    --line: rgba(127,127,127,.35);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #1b1d21; --fg: #eceef1; --muted: #9aa0a9; color-scheme: dark; }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 20px 16px max(20px, env(safe-area-inset-bottom, 0px));
+    padding-top: max(20px, env(safe-area-inset-top, 0px));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1 { margin: 0; font-size: 1.9rem; font-weight: 800; letter-spacing: 0.02em; }
+  p { margin: 0; color: var(--muted); font-size: 0.9rem; text-align: center; max-width: 330px; }
+
+  .menu { display: flex; flex-direction: column; gap: 14px; width: min(100%, 340px); }
+
+  .menu-btn {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+    width: 100%; padding: 18px 20px; font: inherit; text-align: left;
+    color: var(--fg); background: #fff; border: 0; border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.14); cursor: pointer;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .menu-btn:active { transform: scale(.97); }
+  .menu-btn .t { font-size: 1.1rem; font-weight: 800; }
+  .menu-btn .d { font-size: 0.8rem; color: var(--muted); }
+  .menu-btn.primary .t { color: #00a651; }
+  .menu-btn.history .t { color: #00aeef; }
+
+  /* ---- history page ---- */
+  .history { width: min(100%, 520px); display: flex; flex-direction: column; gap: 10px; }
+  .history[hidden] { display: none; }
+
+  .back {
+    align-self: flex-start; padding: 8px 14px; font: inherit; font-size: 0.85rem;
+    font-weight: 800; color: var(--fg); background: rgba(127,127,127,.18);
+    border: 0; border-radius: 999px; cursor: pointer;
+  }
+
+  .empty {
+    padding: 30px 18px; text-align: center; background: #fff;
+    border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,.1);
+  }
+  .empty .big { font-size: 2.2rem; }
+  .empty .h { margin: 8px 0 4px; font-weight: 800; }
+  .empty .s { font-size: 0.82rem; color: var(--muted); }
+
+  .rec { background: #fff; border-radius: 14px; padding: 12px 14px; box-shadow: 0 3px 10px rgba(0,0,0,.1); }
+  .rec .top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .rec .when { font-size: 0.72rem; color: var(--muted); font-weight: 700; }
+  .rec .mode { font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: rgba(127,127,127,.18); }
+  .rec .grid { margin-top: 8px; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 0.8rem; }
+  .rec .grid dt { color: var(--muted); font-weight: 700; }
+  .rec .grid dd { margin: 0; font-weight: 700; }
+  .rec .why { margin: 8px 0 0; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 0.76rem; color: var(--muted); }
+  .swatch { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; border: 1px solid rgba(0,0,0,.25); }
+
+  .foot { font-size: 0.75rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<h1 id="homeTitle">Ludo Board</h1>
+<p id="homeLead">Set up a match, place your tokens, then let the strategy engine call the next move.</p>
+
+<div class="menu" id="homeMenu">
+  <button class="menu-btn primary" id="createBtn" type="button">
+    <span class="t">Create Match</span>
+    <span class="d">Pick players and colours, then open the board</span>
+  </button>
+  <button class="menu-btn history" id="historyBtn" type="button">
+    <span class="t">Match History</span>
+    <span class="d">Review earlier strategy analyses</span>
+  </button>
+</div>
+
+<section class="history" id="history" hidden>
+  <button class="back" id="backBtn" type="button">&larr; Back</button>
+  <div id="historyBody"></div>
+</section>
+
+<p class="foot">4 colours &middot; 4 tokens each &middot; 72 numbered boxes</p>
+
+<script>
+  var HKEY = "ludo_matches";
+  var home = document.getElementById("homeMenu");
+  var history = document.getElementById("history");
+  var historyBody = document.getElementById("historyBody");
+  var homeTitle = document.getElementById("homeTitle");
+  var homeLead = document.getElementById("homeLead");
+
+  var SWATCH = { green: "#00b300", yellow: "#ffd400", red: "#ff0000", blue: "#1e5bff" };
+  var NAME = { green: "Green", yellow: "Yellow", red: "Red", blue: "Blue" };
+
+  function readAll() {
+    try { return JSON.parse(localStorage.getItem(HKEY)) || []; }
+    catch (e) { return []; }
+  }
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+
+  function showHome() {
+    home.hidden = false;
+    history.hidden = true;
+    homeTitle.textContent = "Ludo Board";
+    homeLead.hidden = false;
+  }
+
+  function showHistory() {
+    home.hidden = true;
+    homeLead.hidden = true;
+    homeTitle.textContent = "Match History";
+    history.hidden = false;
+
+    var all = readAll();
+    if (!all.length) {
+      historyBody.innerHTML =
+        '<div class="empty">' +
+        '<div class="big">&#127918;</div>' +
+        '<div class="h">No matches yet</div>' +
+        '<div class="s">Jab aap Create Match se koi strategy analysis chalayenge, woh yahin dikhega.</div>' +
+        "</div>";
+      return;
+    }
+
+    historyBody.innerHTML = all.map(function (r) {
+      var when = new Date(r.at);
+      var colours = (r.active || []).map(function (k) {
+        return '<span class="swatch" style="background:' + SWATCH[k] + '"></span>' + NAME[k];
+      }).join(", ");
+      var board = (r.board || []).map(function (t) {
+        return t.label + ":" + (t.spot || "?") + (t.box != null ? " (" + t.box + ")" : "");
+      }).join("  ");
+      return '<article class="rec">' +
+        '<div class="top"><span class="mode">' + esc(r.mode) + "</span>" +
+        '<span class="when">' + esc(when.toLocaleString()) + "</span></div>" +
+        '<dl class="grid">' +
+        "<dt>Colours</dt><dd>" + colours + "</dd>" +
+        "<dt>Your colour</dt><dd>" + esc(NAME[r.mine] || r.mine) + "</dd>" +
+        "<dt>Dice</dt><dd>" + esc(r.dice) + "</dd>" +
+        "<dt>Move Token</dt><dd>" + esc(r.token || "--") + "</dd>" +
+        "<dt>Move Location</dt><dd>" + esc(r.location || "--") + "</dd>" +
+        "<dt>Board</dt><dd>" + esc(board || "--") + "</dd>" +
+        "</dl>" +
+        '<p class="why"><b>Reason:</b> ' + esc(r.reason || "--") + "</p>" +
+        "</article>";
+    }).join("");
+  }
+
+  document.getElementById("createBtn").addEventListener("click", function () {
+    location.href = "ludo-board.html";
+  });
+  document.getElementById("historyBtn").addEventListener("click", showHistory);
+  document.getElementById("backBtn").addEventListener("click", showHome);
+</script>
+
+</body>
+</html>

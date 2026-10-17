@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ludo Tokens</title>
+<style>
+  body { margin:0; background:#f4f4f4; font-family:sans-serif; text-align:center; }
+  h2 { margin:16px 0 8px; }
+  .row { display:flex; flex-wrap:wrap; justify-content:center; gap:16px; padding:16px; }
+  .token { width:90px; height:153px; cursor:pointer; transition:transform .2s; }
+  .token:hover { transform:translateY(-8px) scale(1.08); }
+</style>
+</head>
+<body>
+<h2>Ludo Tokens</h2>
+
+<!-- Ek baar pawn shape define kiya, 4 baar reuse -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="pawn" viewBox="0 0 200 340">
+      <path id="body" d="M78 118 L5 322 A95 18 0 0 0 195 322 L122 118 Z"/>
+      <circle cx="100" cy="68" r="62"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="row">
+  <svg class="token" style="fill:#ff0000;stroke:#000;stroke-width:2" id="red"><use href="#pawn"/></svg>
+  <svg class="token" style="fill:#00b300;stroke:#000;stroke-width:2" id="green"><use href="#pawn"/></svg>
+  <svg class="token" style="fill:#ffd400;stroke:#000;stroke-width:2" id="yellow"><use href="#pawn"/></svg>
+  <svg class="token" style="fill:#1e5bff;stroke:#000;stroke-width:2" id="blue"><use href="#pawn"/></svg>
+</div>
+
+<script>
+  // Click karne par token ka color console me dikhega
+  document.querySelectorAll('.token').forEach(t =>
+    t.addEventListener('click', () => console.log(t.id + ' token selected'))
+  );
+</script>
+</body>
+</html>

@@ -1,0 +1,1014 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Ludo Board</title><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Layout: one square SVG board centered on a quiet page, 15x15 grid */
+  :root {
+    --bg: #eef0f2;
+    --fg: #23262b;
+    --muted: #666c75;
+    --font-body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #1b1d21; --fg: #eceef1; --muted: #9aa0a9; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --bg: #1b1d21; --fg: #eceef1; --muted: #9aa0a9; color-scheme: dark; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    padding-block: 20px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  h1 { margin: 0; font-size: 1.25rem; font-weight: 800; letter-spacing: 0.02em; text-wrap: balance; }
+  p { margin: 0; color: var(--muted); font-size: 0.85rem; }
+  .board-wrap { width: min(100%, 560px); }
+
+  /* selected token readout + deselect button, under the board */
+  .sel-bar { display: flex; align-items: center; gap: 10px; }
+  .sel-bar[hidden] { display: none; }
+  .sel-label { min-width: 46px; padding: 7px 12px; font-weight: 800; letter-spacing: 0.04em; color: #fff; background: #1d2026; border-radius: 8px; }
+  .clear-btn { padding: 9px 18px; font: inherit; font-weight: 700; color: var(--fg); background: rgba(127,127,127,.18); border: 0; border-radius: 999px; cursor: pointer; }
+  .clear-btn[hidden] { display: none; }
+
+  /* win popup: shown the moment a token lands on a home triangle */
+  .win { position: fixed; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.45); }
+  .win[hidden] { display: none; }
+  .win-card { width: 100%; max-width: 170px; background: #fff; border-radius: 12px; padding: 12px; text-align: center; box-shadow: 0 12px 34px rgba(0,0,0,.4); animation: win-in .4s cubic-bezier(.2,1.4,.4,1) both; }
+  @keyframes win-in {
+    from { opacity: 0; transform: scale(.55) rotate(-8deg); }
+    60%  { opacity: 1; transform: scale(1.08) rotate(2deg); }
+    to   { opacity: 1; transform: scale(1) rotate(0deg); }
+  }
+  .win-img { width: 100%; height: auto; display: block; }
+  .win-title { margin: 8px 0 0; font-weight: 800; font-size: 0.8rem; color: #1d2026; }
+  .win-close { margin-top: 10px; width: 100%; padding: 8px; font: inherit; font-size: 0.85rem; font-weight: 700; color: #1d2026; background: rgba(127,127,127,.18); border: 0; border-radius: 8px; cursor: pointer; }
+
+  /* ---- match setup popup, shown when the board opens ---- */
+  .setup { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.45); overflow: auto; }
+  .setup[hidden] { display: none; }
+  .setup-card { width: 100%; max-width: 340px; background: var(--bg); color: var(--fg); border-radius: 16px; padding: 18px; box-shadow: 0 12px 34px rgba(0,0,0,.4); }
+  .setup-card h2 { margin: 0 0 4px; font-size: 1.1rem; font-weight: 800; }
+  .setup-label { margin: 16px 0 8px; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { flex: 1 1 auto; min-width: 74px; padding: 10px 8px; font: inherit; font-weight: 800; font-size: 0.85rem; color: var(--fg); background: rgba(127,127,127,.12); border: 2px solid transparent; border-radius: 12px; cursor: pointer; }
+  .chip[aria-pressed="true"] { border-color: var(--fg); background: rgba(127,127,127,.24); }
+  .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; border: 1px solid rgba(0,0,0,.3); }
+  .setup-note { margin: 6px 0 0; font-size: 0.78rem; color: var(--muted); }
+  .team-line { display: flex; flex-wrap: wrap; gap: 8px; }
+  .team-pill { display: inline-flex; align-items: center; gap: 6px; padding: 9px 12px; font-weight: 800; font-size: 0.85rem; border-radius: 12px; background: rgba(127,127,127,.18); }
+  .team-pill.me { box-shadow: inset 0 0 0 2px currentColor; }
+  .setup-start { margin-top: 18px; width: 100%; padding: 13px; font: inherit; font-size: 1rem; font-weight: 800; color: #fff; background: #1d2026; border: 0; border-radius: 12px; cursor: pointer; }
+
+  /* ---- player A panel ---- */
+  .panel { width: min(100%, 560px); background: var(--bg); border-radius: 14px; padding: 12px; box-shadow: 0 3px 12px rgba(0,0,0,.13); }
+  .panel-head { margin-bottom: 8px; }
+  .panel-title { margin: 0 0 8px; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .panel-sub { margin: 0; font-size: 0.78rem; color: var(--muted); }
+  .step { border-top: 1px dashed rgba(127,127,127,.4); padding-top: 10px; margin-top: 10px; }
+  .step[hidden] { display: none; }
+  .dice-row { display: flex; gap: 6px; justify-content: space-between; }
+  .die { width: 44px; height: 44px; padding: 6px; background: #fff; border: 2px solid var(--fg); border-radius: 10px; cursor: pointer; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); place-items: center; }
+  .die[aria-pressed="true"] { background: var(--fg); }
+  .die[aria-pressed="true"] .pip { background: #fff; }
+  .pip { width: 8px; height: 8px; border-radius: 50%; background: #111; }
+  .dice-now { margin: 8px 0 0; font-size: 0.85rem; font-weight: 800; }
+  .pos-list { display: flex; flex-direction: column; gap: 6px; max-height: 190px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .pos-row { display: flex; align-items: center; gap: 8px; }
+  .pos-tag { flex: 0 0 96px; display: flex; align-items: center; gap: 5px; font-size: 0.78rem; font-weight: 800; }
+  .pos-row select { flex: 1 1 auto; min-width: 0; padding: 8px 6px; font: inherit; font-size: 0.78rem; font-weight: 700; color: var(--fg); background: #fff; border: 1px solid rgba(127,127,127,.5); border-radius: 8px; }
+  .pos-row select.missing { border-color: var(--red); }
+  .mini-btn { margin-top: 8px; width: 100%; padding: 10px; font: inherit; font-size: 0.85rem; font-weight: 800; color: var(--fg); background: rgba(127,127,127,.18); border: 0; border-radius: 10px; cursor: pointer; }
+  .warn { margin: 8px 0 0; padding: 8px 10px; font-size: 0.76rem; font-weight: 700; color: #fff; background: var(--red); border-radius: 8px; }
+  .warn[hidden] { display: none; }
+  .next-btn { margin-top: 10px; width: 100%; padding: 12px; font: inherit; font-weight: 800; font-size: 0.95rem; color: #fff; background: #1d2026; border: 0; border-radius: 12px; cursor: pointer; }
+  .next-btn[hidden] { display: none; }
+  .busy { margin-top: 10px; padding: 10px; text-align: center; font-size: 0.85rem; font-weight: 800; color: var(--fg); background: rgba(127,127,127,.18); border-radius: 10px; animation: pulse 1s ease-in-out infinite; }
+  .busy[hidden] { display: none; }
+  @keyframes pulse { 50% { opacity: .45; } }
+  .advice { margin: 10px 0 0; font-size: 0.85rem; line-height: 1.6; }
+  .advice .row { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px dashed rgba(127,127,127,.35); }
+  .advice .why { margin-top: 8px; color: var(--muted); font-size: 0.78rem; }
+  .advice .err { margin: 0; padding: 9px 11px; font-size: 0.78rem; font-weight: 700; color: #fff; background: var(--red); border-radius: 8px; }
+
+  /* token picker: shown when a crowded box is tapped */
+  .picker { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.45); }
+  .picker[hidden] { display: none; }
+  .picker-card { width: 100%; max-width: 330px; background: var(--bg); color: var(--fg); border-radius: 14px; padding: 16px; box-shadow: 0 12px 34px rgba(0,0,0,.4); }
+  .picker-title { margin: 0 0 12px; font-weight: 800; font-size: 1rem; }
+  .picker-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .picker-item { width: 60px; height: 92px; padding: 0; border: 2px solid transparent; border-radius: 10px; background: none; cursor: pointer; }
+  .picker-item svg { width: 100%; height: 100%; display: block; }
+  .picker-item[aria-pressed="true"] { border-color: var(--fg); }
+  .picker-name { margin: 6px 0 0; font-size: 0.7rem; color: var(--muted); text-align: center; }
+  .picker-cancel { margin-top: 14px; width: 100%; padding: 10px; font: inherit; font-weight: 700; color: var(--fg); background: rgba(127,127,127,.18); border: 0; border-radius: 10px; cursor: pointer; }
+  .board-wrap { width: min(100%, 560px); }
+  svg { display: block; width: 100%; height: auto; max-width: 100%; box-shadow: 0 6px 24px rgba(0,0,0,.25); touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&display=swap">
+
+<h1>Ludo Board</h1>
+<div class="board-wrap">
+  <svg id="board" viewBox="0 0 15 15" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ludo board with four colored homes, a cross-shaped track and a center finish">
+    <defs>
+      <symbol id="ludo-pawn" viewBox="0 0 200 340">
+        <path d="M78 118 L5 322 A95 18 0 0 0 195 322 L122 118 Z"/>
+        <circle cx="100" cy="68" r="62"/>
+      </symbol>
+    </defs>
+  </svg>
+</div>
+<div class="sel-bar" id="selBar" hidden>
+  <span class="sel-label" id="selLabel">--</span>
+  <button class="clear-btn" id="clearBtn" type="button">Deselect</button>
+</div>
+<p>Green, Yellow, Blue and Red homes</p>
+
+<div class="picker" id="picker" hidden>
+  <div class="picker-card" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
+    <p class="picker-title" id="pickerTitle">Pick a token</p>
+    <div class="picker-row" id="pickerRow"></div>
+    <button class="picker-cancel" id="pickerCancel" type="button">Cancel</button>
+  </div>
+</div>
+
+<div class="win" id="winPop" hidden>
+  <div class="win-card" role="alertdialog" aria-labelledby="winTitle">
+    <img class="win-img" id="winImg" src="win-icons/win.png" alt="Celebration">
+    <p class="win-title" id="winTitle">Home!</p>
+    <button class="win-close" id="winClose" type="button">Close</button>
+  </div>
+</div>
+
+<div class="setup" id="setup">
+  <div class="setup-card" role="dialog" aria-modal="true" aria-labelledby="setupTitle">
+    <h2 id="setupTitle">New Match</h2>
+    <p class="setup-note" style="margin-top:0">Set up the match before play starts.</p>
+
+    <p class="setup-label">Select Player</p>
+    <div class="chips" id="modeChips">
+      <button class="chip" type="button" data-mode="1v1" aria-pressed="true">1 v 1</button>
+      <button class="chip" type="button" data-mode="2v2" aria-pressed="false">2 v 2</button>
+    </div>
+
+    <p class="setup-label">Your Colour</p>
+    <div class="chips" id="colourChips">
+      <button class="chip" type="button" data-key="green" aria-pressed="true"><span class="swatch" style="background:#00b300"></span>Green</button>
+      <button class="chip" type="button" data-key="red" aria-pressed="false"><span class="swatch" style="background:#ff0000"></span>Red</button>
+      <button class="chip" type="button" data-key="yellow" aria-pressed="false"><span class="swatch" style="background:#ffd400"></span>Yellow</button>
+      <button class="chip" type="button" data-key="blue" aria-pressed="false"><span class="swatch" style="background:#1e5bff"></span>Blue</button>
+    </div>
+
+    <p class="setup-label">Opponent <span style="text-transform:none;letter-spacing:0;font-weight:600">(auto detected)</span></p>
+    <div class="team-line" id="oppLine"></div>
+    <p class="setup-note" id="oppNote">Opponent colour aapke colour se khud decide hota hai.</p>
+
+    <button class="setup-start" id="startBtn" type="button">Start Match</button>
+  </div>
+</div>
+
+<div class="panel" id="panel" hidden>
+  <div class="panel-head">
+    <p class="panel-title">Player A (Own) &mdash; <span id="ownColour">Green</span></p>
+    <p class="panel-sub" id="teamSub"></p>
+  </div>
+
+  <div class="step" id="stepDice">
+    <p class="panel-title">1 &mdash; Dice Selection</p>
+    <div class="dice-row" id="diceRow"></div>
+    <p class="dice-now" id="diceNow">Selected: &mdash;</p>
+  </div>
+
+  <div class="step" id="stepPos" hidden>
+    <p class="panel-title">2 &mdash; Token Locations</p>
+    <div class="pos-list" id="posList"></div>
+    <button class="mini-btn" id="confirmBtn" type="button">Confirm Positions</button>
+    <p class="warn" id="posWarn" hidden></p>
+  </div>
+
+  <button class="next-btn" id="nextBtn" type="button" hidden>Next Move</button>
+  <div class="busy" id="busy" hidden>Analysing&hellip;</div>
+  <div class="advice" id="advice" hidden></div>
+</div>
+
+<script src="game.js"></script>
+<script>
+(function () {
+  var C = { green: "#00a651", yellow: "#ffcc00", red: "#ed1c24", blue: "#00aeef" };
+  var LINE = "#555", WHITE = "#ffffff";
+  var NS = "http://www.w3.org/2000/svg";
+  var svg = document.getElementById("board");
+
+  function el(name, attrs, parent) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    (parent || svg).appendChild(e);
+    return e;
+  }
+
+  // background
+  el("rect", { x: 0, y: 0, width: 15, height: 15, fill: WHITE });
+
+  // homes
+  var homes = [
+    { x: 0, y: 0, c: C.green },
+    { x: 9, y: 0, c: C.yellow },
+    { x: 0, y: 9, c: C.red },
+    { x: 9, y: 9, c: C.blue }
+  ];
+  homes.forEach(function (h) {
+    el("rect", { x: h.x, y: h.y, width: 6, height: 6, fill: h.c });
+    el("rect", { x: h.x + 1.25, y: h.y + 1.25, width: 3.5, height: 3.5, fill: WHITE });
+  });
+
+  // colored cells
+  var colored = {};
+  function paint(col, row, color) { colored[col + "," + row] = color; }
+  for (var i = 1; i <= 5; i++) {
+    paint(i, 7, C.green);
+    paint(7, i, C.yellow);
+    paint(14 - i, 7, C.blue);
+    paint(7, 14 - i, C.red);
+  }
+  paint(1, 6, C.green);
+  paint(8, 1, C.yellow);
+  paint(13, 8, C.blue);
+  paint(6, 13, C.red);
+
+  // path cells (left, right, top, bottom arms)
+  function cell(col, row) {
+    var fill = colored[col + "," + row] || WHITE;
+    el("rect", { x: col, y: row, width: 1, height: 1, fill: fill, stroke: LINE, "stroke-width": 0.035 });
+  }
+  var r, c;
+  for (r = 6; r <= 8; r++) {
+    for (c = 0; c <= 5; c++) cell(c, r);
+    for (c = 9; c <= 14; c++) cell(c, r);
+  }
+  for (c = 6; c <= 8; c++) {
+    for (r = 0; r <= 5; r++) cell(c, r);
+    for (r = 9; r <= 14; r++) cell(c, r);
+  }
+
+  // center triangles, one per colour: GHT / RHT / YHT / BHT
+  var HOME_TRIANGLES = {};
+  function tri(o) {
+    var p = el("polygon", {
+      id: o.abbr, "data-abbr": o.abbr, "data-name": o.full, "data-home": "triangle",
+      points: o.pts, fill: o.color, stroke: LINE, "stroke-width": 0.035, "stroke-linejoin": "round"
+    });
+    el("title", {}, p).textContent = o.full + " (" + o.abbr + ")";
+    var t = el("text", {
+      x: o.lx, y: o.ly, "text-anchor": "middle", "dominant-baseline": "central",
+      "font-size": 0.3, "font-weight": 800, fill: "#000000", stroke: "none"
+    });
+    t.textContent = o.abbr;
+    HOME_TRIANGLES[o.abbr] = { name: o.full, color: o.color, node: p, key: o.key, cx: o.cx, cy: o.cy };
+  }
+  tri({ pts: "6,6 6,9 7.5,7.5", color: C.green,  abbr: "GHT", full: "Green home triangle",  key: "green",  cx: 6.5, cy: 7.5, lx: 6.4, ly: 7.5 });
+  tri({ pts: "6,6 9,6 7.5,7.5", color: C.yellow, abbr: "YHT", full: "Yellow home triangle", key: "yellow", cx: 7.5, cy: 6.5, lx: 7.5, ly: 6.4 });
+  tri({ pts: "9,6 9,9 7.5,7.5", color: C.blue,   abbr: "BHT", full: "Blue home triangle",   key: "blue",   cx: 8.5, cy: 7.5, lx: 8.6, ly: 7.5 });
+  tri({ pts: "6,9 9,9 7.5,7.5", color: C.red,    abbr: "RHT", full: "Red home triangle",    key: "red",    cx: 7.5, cy: 8.5, lx: 7.5, ly: 8.6 });
+
+  // arrows (drawn pointing down, then rotated)
+  function arrow(col, row, rot, color) {
+    var g = el("g", { transform: "translate(" + col + " " + row + ") rotate(" + rot + " 0.5 0.5)" });
+    el("polygon", {
+      points: "0.3,0.15 0.7,0.15 0.7,0.5 0.86,0.5 0.5,0.88 0.14,0.5 0.3,0.5",
+      fill: color
+    }, g);
+  }
+  arrow(7, 0, 0, C.yellow);
+  arrow(0, 7, -90, C.green);
+  arrow(14, 7, 90, C.blue);
+  arrow(7, 14, 180, C.red);
+
+  // safe-cell stars
+  function star(col, row) {
+    var cx = col + 0.5, cy = row + 0.52, R = 0.34, rr = 0.14, pts = [];
+    for (var k = 0; k < 10; k++) {
+      var ang = -Math.PI / 2 + k * Math.PI / 5;
+      var rad = k % 2 === 0 ? R : rr;
+      pts.push((cx + rad * Math.cos(ang)).toFixed(3) + "," + (cy + rad * Math.sin(ang)).toFixed(3));
+    }
+    el("polygon", { points: pts.join(" "), fill: "#9c9c9c" });
+  }
+  star(6, 2);
+  star(12, 6);
+  star(2, 8);
+  star(8, 12);
+
+  // small box numbers: outer track 1..52 clockwise from the green start box,
+  // then the four home lanes 53..72 (outside to inside)
+  var num = {};
+  var ring = [
+    [1,6],[2,6],[3,6],[4,6],[5,6],
+    [6,5],[6,4],[6,3],[6,2],[6,1],[6,0],
+    [7,0],[8,0],
+    [8,1],[8,2],[8,3],[8,4],[8,5],
+    [9,6],[10,6],[11,6],[12,6],[13,6],[14,6],
+    [14,7],[14,8],
+    [13,8],[12,8],[11,8],[10,8],[9,8],
+    [8,9],[8,10],[8,11],[8,12],[8,13],[8,14],
+    [7,14],[6,14],
+    [6,13],[6,12],[6,11],[6,10],[6,9],
+    [5,8],[4,8],[3,8],[2,8],[1,8],[0,8],
+    [0,7],[0,6]
+  ];
+  ring.forEach(function (p, idx) { num[p[0] + "," + p[1]] = idx + 1; });
+  var n = 53, j;
+  for (j = 1; j <= 5; j++) num[j + ",7"] = n++;
+  for (j = 1; j <= 5; j++) num["7," + j] = n++;
+  for (j = 13; j >= 9; j--) num[j + ",7"] = n++;
+  for (j = 13; j >= 9; j--) num["7," + j] = n++;
+
+  Object.keys(num).forEach(function (key) {
+    var p = key.split(",");
+    var t = el("text", {
+      x: +p[0] + 0.07,
+      y: +p[1] + 0.27,
+      "font-size": 0.26,
+      "font-family": "system-ui, -apple-system, Segoe UI, sans-serif",
+      "font-weight": 700,
+      fill: "#1d2026",
+      stroke: "#ffffff",
+      "stroke-width": 0.06,
+      "paint-order": "stroke",
+      "stroke-linejoin": "round"
+    });
+    t.textContent = num[key];
+  });
+
+  // the four pawn tokens, one colour per home; PAWN_H/W keep the 200x340 ratio
+  var PAWN_H = 1.15, PAWN_W = PAWN_H * (200 / 340);
+  var PAWN_AR = 340 / 200;              // a pawn is this much taller than it is wide
+  var tokenHomes = [
+    { x: 0, y: 0, c: "#00b300", n: "Green" },
+    { x: 9, y: 0, c: "#ffd400", n: "Yellow" },
+    { x: 0, y: 9, c: "#ff0000", n: "Red" },
+    { x: 9, y: 9, c: "#1e5bff", n: "Blue" }
+  ];
+  var offs = [[-0.95, -0.95], [0.95, -0.95], [-0.95, 0.95], [0.95, 0.95]];
+  var LETTERS = ["A", "B", "C", "D"];     // GA, GB, GC, GD and so on per colour
+  var tokens = [];
+  // yard slot per colour, so a token put back on Base knows where to stand
+  var homeX = {}, homeY = {};
+  tokenHomes.forEach(function (h) {
+    var key = h.n.toLowerCase();
+    homeX[key] = []; homeY[key] = [];
+    offs.forEach(function (o) {
+      homeX[key].push(h.x + 3 + o[0]);
+      homeY[key].push(h.y + 3 + o[1]);
+    });
+  });
+  tokenHomes.forEach(function (h) {
+    offs.forEach(function (o, k) {
+      var cx = h.x + 3 + o[0];
+      var cy = h.y + 3 + o[1];
+      var g = el("g", {
+        "data-token": tokens.length,
+        "pointer-events": "all",
+        style: "cursor:pointer"
+      });
+      var ring = el("circle", {
+        cx: 0, cy: 0, r: 0.62, fill: "none",
+        stroke: "#1d2026", "stroke-width": 0.07, opacity: 0
+      }, g);
+      var u = el("use", {
+        href: "#ludo-pawn",
+        x: -PAWN_W / 2,
+        y: -PAWN_H / 2,
+        width: PAWN_W,
+        height: PAWN_H,
+        fill: h.c,
+        stroke: "#000000",
+        "stroke-width": 10
+      }, g);
+      g.style.transform = "translate(" + cx + "px," + cy + "px)";
+      tokens.push({ node: g, ring: ring, use: u, col: null, row: null, tri: null, p: 0, slot: k, spot: null, key: h.n.toLowerCase(), c: h.c, name: h.n + " " + (k + 1), label: h.n[0] + LETTERS[k] });
+      // enable the slide only after the start position is painted,
+      // otherwise every token flies in from the top-left corner on load
+      requestAnimationFrame(function () {
+        g.style.transition = "transform 420ms cubic-bezier(0.3, 1.15, 0.45, 1)";
+      });
+    });
+  });
+
+  // tap a token to select it, then tap any numbered box to move it there
+  var selected = null;
+  var cellGroups = {};
+  var clearBtn = document.getElementById("clearBtn");
+  var selBar = document.getElementById("selBar");
+  var selLabel = document.getElementById("selLabel");
+
+  function select(tok) {
+    if (selected) selected.ring.setAttribute("opacity", 0);
+    selected = tok;
+    if (tok) tok.ring.setAttribute("opacity", 1);
+    selBar.hidden = !tok;
+    if (tok) selLabel.textContent = tok.label;
+  }
+
+  clearBtn.addEventListener("click", function () {
+    select(null);
+  });
+
+  // win popup -- white card with win.png, closes itself after 3 seconds
+  var winPop = document.getElementById("winPop");
+  var winTitle = document.getElementById("winTitle");
+  var winTimer = null;
+
+  function closeWin() {
+    clearTimeout(winTimer);
+    winTimer = null;
+    winPop.hidden = true;
+  }
+
+  function showWin(tok, abbr) {
+    winTitle.textContent = tok.name + " reached " + HOME_TRIANGLES[abbr].name + "!";
+    winPop.hidden = false;
+    clearTimeout(winTimer);
+    winTimer = setTimeout(closeWin, 3000);
+  }
+
+  document.getElementById("winClose").addEventListener("click", closeWin);
+  winPop.addEventListener("click", function (e) {
+    if (e.target === winPop) closeWin();
+  });
+
+  // the centre is split by its two diagonals, so whichever axis is longer says
+  // which of the four triangles was hit
+  function triAt(pt) {
+    var dx = pt.x - 7.5, dy = pt.y - 7.5;
+    if (Math.abs(dy) <= Math.abs(dx)) return dx < 0 ? "GHT" : "BHT";
+    return dy < 0 ? "YHT" : "RHT";
+  }
+
+  function placeTri(tok, abbr) {
+    var t = HOME_TRIANGLES[abbr];
+    if (tok.col != null) {
+      var key = tok.col + "," + tok.row;
+      var group = cellGroups[key];
+      if (group) {
+        var at = group.indexOf(tok);
+        if (at >= 0) group.splice(at, 1);
+        if (group.length) layoutCell(tok.col, tok.row);
+        else delete cellGroups[key];
+      }
+      tok.col = null;
+      tok.row = null;
+    }
+    tok.tri = abbr;
+    tok.use.setAttribute("x", -PAWN_W / 2);
+    tok.use.setAttribute("y", -PAWN_H / 2);
+    tok.use.setAttribute("width", PAWN_W);
+    tok.use.setAttribute("height", PAWN_H);
+    tok.use.setAttribute("stroke-width", 6.6 / PAWN_W);
+    tok.ring.setAttribute("r", 0.62);
+    tok.node.style.transform = "translate(" + t.cx + "px," + t.cy + "px)";
+    showWin(tok, abbr);
+  }
+
+  // every token sharing one box gets a narrower slice of it, so a stack of up to
+  // four still fits inside the single 1x1 cell; the outline is rescaled too so it
+  // does not vanish on the small sizes
+  function layoutCell(col, row) {
+    var group = cellGroups[col + "," + row];
+    if (!group) return;
+    var n = group.length;
+    var gap = 0.02;
+    var w = Math.min((1 - (n - 1) * gap) / n, 0.98 / PAWN_AR);
+    var hh = w * PAWN_AR;
+    var step = w + gap;
+    group.forEach(function (tok, i) {
+      tok.use.setAttribute("x", -w / 2);
+      tok.use.setAttribute("y", -hh / 2);
+      tok.use.setAttribute("width", w);
+      tok.use.setAttribute("height", hh);
+      tok.use.setAttribute("stroke-width", 6.6 / w);
+      tok.ring.setAttribute("r", w * 0.62 / PAWN_W);
+      tok.node.style.transform = "translate(" +
+        (col + 0.5 + (i - (n - 1) / 2) * step) + "px," + (row + 0.5) + "px)";
+    });
+  }
+
+  // a token that has reached its home triangle is done and never moves again
+  function place(tok, col, row) {
+    if (tok.tri) return;
+    if (tok.col != null) {
+      var oldKey = tok.col + "," + tok.row;
+      var group = cellGroups[oldKey];
+      var at = group.indexOf(tok);
+      if (at >= 0) group.splice(at, 1);
+      if (group.length) layoutCell(tok.col, tok.row);
+      else delete cellGroups[oldKey];
+    }
+    tok.col = col;
+    tok.row = row;
+    var key = col + "," + row;
+    if (!cellGroups[key]) cellGroups[key] = [];
+    cellGroups[key].push(tok);
+    layoutCell(col, row);
+  }
+
+  function boardPoint(e) {
+    var ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+    if (window.DOMPoint) return new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
+    var p = svg.createSVGPoint();
+    p.x = e.clientX;
+    p.y = e.clientY;
+    return p.matrixTransform(ctm.inverse());
+  }
+
+  // a crowded box is too small to aim at, so tapping one lists everything in it
+  var picker = document.getElementById("picker");
+  var pickerRow = document.getElementById("pickerRow");
+  var SVG_NS = "http://www.w3.org/2000/svg";
+
+  function closePicker() {
+    picker.hidden = true;
+    pickerRow.textContent = "";
+  }
+
+  function openPicker(col, row, group) {
+    document.getElementById("pickerTitle").textContent =
+      "Box " + num[col + "," + row] + " — pick a token";
+    pickerRow.textContent = "";
+    group.forEach(function (tok) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "picker-item";
+      btn.title = tok.label;
+      btn.setAttribute("aria-label", tok.label);
+      btn.setAttribute("aria-pressed", tok === selected ? "true" : "false");
+      var s = document.createElementNS(SVG_NS, "svg");
+      s.setAttribute("viewBox", "0 0 200 340");
+      var u = document.createElementNS(SVG_NS, "use");
+      u.setAttribute("href", "#ludo-pawn");
+      u.setAttribute("fill", tok.c);
+      u.setAttribute("stroke", "#000000");
+      u.setAttribute("stroke-width", 7);
+      s.appendChild(u);
+      btn.appendChild(s);
+      var cap = document.createElement("p");
+      cap.className = "picker-name";
+      cap.textContent = tok.label;
+      btn.appendChild(cap);
+      btn.addEventListener("click", function () {
+        select(tok);
+        closePicker();
+      });
+      pickerRow.appendChild(btn);
+    });
+    picker.hidden = false;
+  }
+
+  document.getElementById("pickerCancel").addEventListener("click", closePicker);
+  picker.addEventListener("click", function (e) {
+    if (e.target === picker) closePicker();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !picker.hidden) closePicker();
+  });
+
+  svg.addEventListener("click", function (e) {
+    if (!picker.hidden) return;
+    if (!match.started) return;          // board stays dead until the match starts
+    var pt = boardPoint(e);
+    if (!pt) return;
+    var col = Math.floor(pt.x), row = Math.floor(pt.y);
+    var key = col + "," + row;
+    var isTrack = num[key] != null;
+    var here = isTrack ? cellGroups[key] : null;
+
+    var hit = e.target.closest ? e.target.closest("g[data-token]") : null;
+    var tapped = hit ? tokens[+hit.getAttribute("data-token")] : null;
+
+    // tapping the token that is already in hand puts it back down
+    if (selected && tapped === selected) {
+      select(null);
+      return;
+    }
+
+    // the finish area has no numbers, so it needs its own branch
+    if (col >= 6 && col <= 8 && row >= 6 && row <= 8) {
+      if (selected && !selected.tri && HOME_TRIANGLES[triAt(pt)].key === selected.key) {
+        placeTri(selected, triAt(pt));
+      }
+      return;
+    }
+
+    // a token is already in hand, so the tap is a destination. this is checked
+    // first, which also means the picker never interrupts a move into a box
+    // that already holds other tokens
+    if (selected && isTrack) {
+      place(selected, col, row);
+      return;
+    }
+
+    // nothing in hand and this box is crowded, so let the picker choose which
+    // one -- at that size the tokens are too small to tap one directly
+    if (here && here.length > 1) {
+      openPicker(col, row, here);
+      return;
+    }
+
+    // no token picked yet, so a tap on a token picks it
+    if (tapped) {
+      select(tapped);
+      return;
+    }
+    if (!isTrack) select(null);
+  });
+
+// ---------- match setup ----------
+  var L = window.Ludo;
+  var setup = document.getElementById("setup");
+  var modeChips = document.getElementById("modeChips");
+  var colourChips = document.getElementById("colourChips");
+  var oppLine = document.getElementById("oppLine");
+  var oppNote = document.getElementById("oppNote");
+  var panel = document.getElementById("panel");
+  var ownColour = document.getElementById("ownColour");
+  var teamSub = document.getElementById("teamSub");
+  var advice = document.getElementById("advice");
+  var nextBtn = document.getElementById("nextBtn");
+  var busy = document.getElementById("busy");
+  var diceRow = document.getElementById("diceRow");
+  var diceNow = document.getElementById("diceNow");
+  var stepPos = document.getElementById("stepPos");
+  var posList = document.getElementById("posList");
+  var confirmBtn = document.getElementById("confirmBtn");
+  var posWarn = document.getElementById("posWarn");
+
+  var SWATCH = { green: "#00b300", yellow: "#ffd400", red: "#ff0000", blue: "#1e5bff" };
+
+  var match = { mode: "1v1", mine: "green", theirs: "blue", active: ["green", "blue"], confirmed: false };
+  var rolled = null;
+  var strategy = null;
+
+  function press(container, sel, value) {
+    container.querySelectorAll(sel).forEach(function (b) {
+      b.setAttribute("aria-pressed", b.getAttribute("data-key") === value ||
+        b.getAttribute("data-mode") === value ? "true" : "false");
+    });
+  }
+
+  // 1v1 plays the diagonally opposite colour; 2v2 makes the two diagonals the
+  // teams, so my partner is the colour opposite me and the other diagonal is
+  // the opponent side
+  function refreshColours() {
+    var foe = L.opponentOf(match.mine);
+    match.theirs = foe;
+    match.active = match.mode === "2v2" ? L.ORDER.slice() : [match.mine, foe];
+
+    oppLine.textContent = "";
+    if (match.mode === "2v2") {
+      var myTeam = L.teamOf(match.mine);
+      match.active.forEach(function (k) {
+        var pill = document.createElement("span");
+        pill.className = "team-pill" + (k === match.mine ? " me" : "");
+        pill.style.color = SWATCH[k];
+        pill.innerHTML = '<span class="swatch" style="background:' + SWATCH[k] + '"></span>' +
+          L.PLAYERS[k].name + (k === match.mine ? " (you)" : myTeam.indexOf(k) === 1 ? " (partner)" : "");
+        oppLine.appendChild(pill);
+      });
+      oppNote.textContent = "Your team: " + L.PLAYERS[myTeam[0]].name + " + " + L.PLAYERS[myTeam[1]].name +
+        ". Opponents: " + L.PLAYERS[match.active[2]].name + " + " + L.PLAYERS[match.active[3]].name + ".";
+    } else {
+      var p = document.createElement("span");
+      p.className = "team-pill";
+      p.style.color = SWATCH[foe];
+      p.innerHTML = '<span class="swatch" style="background:' + SWATCH[foe] + '"></span>' + L.PLAYERS[foe].name;
+      oppLine.appendChild(p);
+      oppNote.textContent = L.PLAYERS[foe].name + " is your opponent.";
+    }
+  }
+
+  modeChips.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-mode]");
+    if (!b) return;
+    match.mode = b.getAttribute("data-mode");
+    press(modeChips, "[data-mode]", match.mode);
+    refreshColours();
+  });
+
+  colourChips.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-key]");
+    if (!b) return;
+    match.mine = b.getAttribute("data-key");
+    press(colourChips, "[data-key]", match.mine);
+    refreshColours();
+  });
+
+  // board controls stay dead until the match is started
+  function setupDone(v) {
+    match.started = v;
+    if (!v) return;
+    panel.hidden = false;
+    stepPos.hidden = false;
+    ownColour.textContent = L.PLAYERS[match.mine].name;
+    var team = L.teamOf(match.mine);
+    teamSub.textContent = match.mode === "2v2"
+      ? "Your team: " + L.PLAYERS[team[0]].name + " + " + L.PLAYERS[team[1]].name +
+        " — opponents: " + L.PLAYERS[match.active[2]].name + ", " + L.PLAYERS[match.active[3]].name
+      : "Opponent: " + L.PLAYERS[match.theirs].name;
+    applyActiveColours();
+    buildPosList();
+    select(null);
+    nextBtn.hidden = true;
+    advice.hidden = true;
+  }
+
+  function applyActiveColours() {
+    tokens.forEach(function (t) {
+      t.node.style.display = match.active.indexOf(t.key) !== -1 ? "" : "none";
+    });
+  }
+
+  document.getElementById("startBtn").addEventListener("click", function () {
+    setup.hidden = true;
+    setupDone(true);
+  });
+
+  // ---------- token location setup ----------
+  // every visible token needs an explicit spot before positions can be used
+  function visibleTokens() {
+    return tokens.filter(function (t) { return match.active.indexOf(t.key) !== -1; });
+  }
+
+  function spotOptions(key) {
+    var opts = ['<option value="">-- choose --</option>',
+      '<option value="base">Base</option>',
+      '<option value="start">Start box ' + L.PLAYERS[key].start + "</option>"];
+    for (var b = 1; b <= 52; b++) opts.push('<option value="b' + b + '">Track box ' + b + "</option>");
+    for (var h = 1; h <= 5; h++) opts.push('<option value="h' + h + '">Home path ' + h + "</option>");
+    opts.push('<option value="done">Finished</option>');
+    return opts.join("");
+  }
+
+  function buildPosList() {
+    posList.textContent = "";
+    visibleTokens().forEach(function (t) {
+      var row = document.createElement("div");
+      row.className = "pos-row";
+      var tag = document.createElement("span");
+      tag.className = "pos-tag";
+      tag.style.color = SWATCH[t.key];
+      tag.innerHTML = '<span class="swatch" style="background:' + SWATCH[t.key] + '"></span>' + t.label;
+      var sel = document.createElement("select");
+      sel.className = "missing";
+      sel.setAttribute("data-token", t.label);
+      sel.innerHTML = spotOptions(t.key);
+      sel.addEventListener("change", function () {
+        sel.classList.toggle("missing", !sel.value);
+        t.spot = sel.value || null;
+        match.confirmed = false;
+        nextBtn.hidden = true;
+        advice.hidden = true;
+      });
+      row.appendChild(tag);
+      row.appendChild(sel);
+      posList.appendChild(row);
+    });
+  }
+
+  // turns a spot string into the progress value the rules engine uses
+  function applySpot(tok, val) {
+    if (!val) { tok.p = 0; return; }
+    if (val === "base") tok.p = 0;
+    else if (val === "start") tok.p = L.RING_FROM;
+    else if (val === "done") tok.p = L.FINISH;
+    else if (val[0] === "b") tok.p = progressFromRing(tok.key, +val.slice(1));
+    else if (val[0] === "h") tok.p = L.LANE_FROM + (+val.slice(1)) - 1;
+  }
+
+  // ring box number -> progress, walking back from that colour's start box
+  function progressFromRing(key, ring) {
+    var off = ((ring - L.PLAYERS[key].start) + 52) % 52;
+    return L.RING_FROM + off;
+  }
+
+  confirmBtn.addEventListener("click", function () {
+    var missing = [];
+    visibleTokens().forEach(function (t) {
+      var sel = posList.querySelector('select[data-token="' + t.label + '"]');
+      if (!sel || !sel.value) missing.push(t.label);
+      else applySpot(t, sel.value);
+    });
+    if (missing.length) {
+      posWarn.hidden = false;
+      posWarn.textContent = "Ye tokens ki location set nahi hui: " + missing.join(", ") + ". Sab choose karo.";
+      nextBtn.hidden = true;
+      return;
+    }
+    posWarn.hidden = true;
+    match.confirmed = true;
+    syncBoardFromSpots();
+    confirmBtn.textContent = "Update Positions";
+    if (rolled) nextBtn.hidden = false;
+    advice.hidden = true;
+  });
+
+  // push the confirmed spots back onto the drawn tokens
+  function syncBoardFromSpots() {
+    visibleTokens().forEach(function (t) {
+      if (t.tri) { t.tri = null; }
+      if (t.col != null) {
+        var key = t.col + "," + t.row;
+        var g = cellGroups[key];
+        if (g) {
+          var i = g.indexOf(t);
+          if (i >= 0) g.splice(i, 1);
+          if (g.length) layoutCell(t.col, t.row);
+          else delete cellGroups[key];
+        }
+        t.col = null;
+        t.row = null;
+      }
+      if (t.p <= 5) {
+        t.node.style.transform = "translate(" + (homeX[t.key][t.slot]) + "px," + (homeY[t.key][t.slot]) + "px)";
+        t.use.setAttribute("width", PAWN_W);
+        t.use.setAttribute("height", PAWN_H);
+        t.use.setAttribute("x", -PAWN_W / 2);
+        t.use.setAttribute("y", -PAWN_H / 2);
+      } else if (t.p >= L.FINISH) {
+        var abbr = { green: "GHT", red: "RHT", yellow: "YHT", blue: "BHT" }[t.key];
+        var q = L.PLAYERS[t.key];
+        var cx = 6 + (t.key === "green" ? .5 : t.key === "blue" ? 2.5 : 1.5);
+        var cy = 6 + (t.key === "yellow" ? .5 : t.key === "red" ? 2.5 : 1.5);
+        t.tri = abbr;
+        t.node.style.transform = "translate(" + cx + "px," + cy + "px)";
+      } else {
+        var box = L.boxNumber(t.key, t.p);
+        var cell = L.boxToCell[box];
+        t.col = cell.col;
+        t.row = cell.row;
+        place(t, cell.col, cell.row);
+      }
+    });
+  }
+
+  // ---------- dice ----------
+  var PIPS = {
+    1: [["2","2"]],
+    2: [["1","1"], ["3","3"]],
+    3: [["1","1"], ["2","2"], ["3","3"]],
+    4: [["1","1"], ["1","3"], ["3","1"], ["3","3"]],
+    5: [["1","1"], ["1","3"], ["2","2"], ["3","1"], ["3","3"]],
+    6: [["1","1"], ["1","3"], ["2","1"], ["2","3"], ["3","1"], ["3","3"]]
+  };
+
+  Object.keys(PIPS).forEach(function (v) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "die";
+    b.setAttribute("data-die", v);
+    b.setAttribute("aria-pressed", "false");
+    b.setAttribute("aria-label", "Dice " + v);
+    PIPS[v].forEach(function (p) {
+      var s = document.createElement("span");
+      s.className = "pip";
+      s.style.gridArea = p[0] + " / " + p[1];
+      b.appendChild(s);
+    });
+    b.addEventListener("click", function () {
+      rolled = +v;
+      diceRow.querySelectorAll(".die").forEach(function (d) {
+        d.setAttribute("aria-pressed", d === b ? "true" : "false");
+      });
+      diceNow.textContent = "Selected: " + rolled;
+      advice.hidden = true;
+      nextBtn.hidden = !match.confirmed;
+    });
+    diceRow.appendChild(b);
+  });
+
+  function renderAdvice(rows, reason, err) {
+    advice.hidden = false;
+    if (err) {
+      advice.innerHTML = '<p class="err">' + err + "</p>";
+      return;
+    }
+    var html = "";
+    rows.forEach(function (r) {
+      html += '<div class="row"><span>' + r[0] + "</span><b>" + r[1] + "</b></div>";
+    });
+    if (reason) html += '<p class="why"><b>Reason:</b> ' + reason + "</p>";
+    advice.innerHTML = html;
+  }
+
+  // ---------- next move ----------
+  nextBtn.addEventListener("click", function () {
+    if (!match.confirmed) {
+      renderAdvice([], "", "Pehle Confirm Positions dabao.");
+      return;
+    }
+    if (!rolled) {
+      renderAdvice([], "", "Pehle dice number select karo.");
+      return;
+    }
+    busy.hidden = false;
+    nextBtn.hidden = true;
+
+    var mine = tokens.filter(function (t) { return t.key === match.mine; });
+    var opp = tokens.filter(function (t) { return t.key !== match.mine && match.active.indexOf(t.key) !== -1; });
+
+    var done = function () {
+      busy.hidden = true;
+      nextBtn.hidden = false;
+
+      if (!strategy) {
+        renderAdvice([], "", "satatgy.txt load nahi hui — analysis nahi chal sakti.");
+        return;
+      }
+      var res = L.recommend({ mine: mine, opp: opp, key: match.mine, dice: rolled, strategy: strategy });
+      if (res.error) { renderAdvice([], "", res.error); return; }
+
+      if (res.noMove) {
+        renderAdvice([
+          ["Player A (Own)", L.PLAYERS[match.mine].name],
+          ["Current No.", rolled],
+          ["Move Token", "--"],
+          ["Move Location", "--"]
+        ], "No Legal Move Available for dice " + rolled + ".");
+        saveHistory(null, "No Legal Move Available");
+        return;
+      }
+
+      var where = res.finished ? "Finished (home triangle)" : "Box " + res.box;
+      renderAdvice([
+        ["Player A (Own)", L.PLAYERS[match.mine].name],
+        ["Current No.", res.move.from],
+        ["Move Token", res.move.token.label],
+        ["Move Location", where]
+      ], res.reason + ". Strategy order: " + strategy.priorities.join(" > ") + ".");
+      highlight(res.move.token, res.box, res.finished);
+      saveHistory(res, res.reason);
+    };
+
+    var go = strategy ? Promise.resolve() : L.loadStrategy("satatgy.txt").then(function (s) {
+      strategy = s;
+      if (!s.ok) renderAdvice([], "", s.error);
+    });
+    go.then(done, function () {
+      busy.hidden = true;
+      nextBtn.hidden = false;
+      renderAdvice([], "", "Strategy load fail hui.");
+    });
+  });
+
+  // the recommendation is only marked on the board, never played
+  function highlight(tok, box, finished) {
+    var old = svg.querySelector('[data-mark="1"]');
+    if (old) old.remove();
+    tokens.forEach(function (t) { t.node.style.removeProperty("outline"); });
+    tok.node.style.outline = "2px solid #1d2026";
+    if (finished || box == null) return;
+    var cell = L.boxToCell[box];
+    el("rect", {
+      x: cell.col + 0.06, y: cell.row + 0.06, width: 0.88, height: 0.88,
+      fill: "none", stroke: "#1d2026", "stroke-width": 0.09, rx: 0.12, "data-mark": "1"
+    });
+  }
+
+  // ---------- match history ----------
+  var HKEY = "ludo_matches";
+
+  function saveHistory(res, reason) {
+    var rec = {
+      at: new Date().toISOString(),
+      mode: match.mode,
+      mine: match.mine,
+      active: match.active.slice(),
+      dice: rolled,
+      board: visibleTokens().map(function (t) {
+        return {
+          label: t.label,
+          key: t.key,
+          spot: t.p <= 5 ? "Base" : t.p >= L.FINISH ? "Finished" : L.spotName(t.key, t.p),
+          box: L.boxNumber(t.key, t.p)
+        };
+      }),
+      token: res && res.move ? res.move.token.label : null,
+      from: res && res.move ? res.move.from : null,
+      location: res ? (res.finished ? "Finished" : "Box " + res.box) : null,
+      reason: reason
+    };
+    var all = [];
+    try { all = JSON.parse(localStorage.getItem(HKEY)) || []; } catch (e) { all = []; }
+    all.unshift(rec);
+    try { localStorage.setItem(HKEY, JSON.stringify(all.slice(0, 50))); } catch (e) {}
+  }
+
+  refreshColours();  refreshColours();
+})();
+</script>
+
+</body></html>
