@@ -7,7 +7,6 @@ strategy engine that reads its move priorities from `satatgy.txt`.
 
 | File | Kaam |
 |---|---|
-| `index.html` | Home page — Create Match / Match History |
 | `ludo-board.html` | Board, match setup, token locations, dice, Next Move |
 | `game.js` | Rules engine + strategy chooser |
 | `satatgy.txt` | Strategy file — priorities yahin se read hoti hain |
@@ -25,7 +24,7 @@ cd ludo-s
 python3 -m http.server 8080
 ```
 
-Phir browser me kholo: `http://localhost:8080/index.html`
+Phir browser me kholo: `http://localhost:8080/ludo-board.html`
 
 ## How to play
 
@@ -65,4 +64,4 @@ koi guess kiya hua move nahi.
 
 Har strategy analysis `localStorage` me `ludo_matches` key ke under save hota hai
 (date/time, mode, colours, dice, board state, suggestion, reason).
-**Match History** page par list ya empty state dikhta hai.
+Match History ka page ab nahi hai (home page hata diya gaya hai); data abhi bhi `localStorage` mein save hota hai.
